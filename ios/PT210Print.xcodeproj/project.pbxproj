@@ -1,0 +1,424 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000001 /* PT210PrintApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* PT210PrintApp.swift */; };
+		A00000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* AppModel.swift */; };
+		A00000000000000000000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* ContentView.swift */; };
+		A00000000000000000000004 /* PrintIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000004 /* PrintIntents.swift */; };
+		A00000000000000000000005 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* ShareViewController.swift */; };
+		A00000000000000000000006 /* PT210PrintCore in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000001 /* PT210PrintCore */; };
+		A00000000000000000000007 /* PT210PrintCore in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000002 /* PT210PrintCore */; };
+		A00000000000000000000008 /* PT210PrintShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* PT210PrintShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A00000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000C /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D00000000000000000000003;
+			remoteInfo = PT210PrintShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C00000000000000000000002 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A00000000000000000000008 /* PT210PrintShare.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		B00000000000000000000001 /* PT210PrintApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PT210PrintApp.swift; sourceTree = "<group>"; };
+		B00000000000000000000002 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		B00000000000000000000003 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B00000000000000000000004 /* PrintIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintIntents.swift; sourceTree = "<group>"; };
+		B00000000000000000000005 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		B00000000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B00000000000000000000007 /* PT210Print.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PT210Print.entitlements; sourceTree = "<group>"; };
+		B00000000000000000000008 /* PT210PrintShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PT210PrintShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000009 /* PT210Print.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PT210Print.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0000000000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B0000000000000000000000B /* PT210PrintShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PT210PrintShare.entitlements; sourceTree = "<group>"; };
+		B0000000000000000000000C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C00000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000006 /* PT210PrintCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000007 /* PT210PrintCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D00000000000000000000010 = {
+			isa = PBXGroup;
+			children = (
+				D00000000000000000000011 /* PT210PrintApp */,
+				D00000000000000000000012 /* PT210PrintShareExtension */,
+				D00000000000000000000013 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D00000000000000000000011 /* PT210PrintApp */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000001 /* PT210PrintApp.swift */,
+				B00000000000000000000002 /* AppModel.swift */,
+				B00000000000000000000003 /* ContentView.swift */,
+				B00000000000000000000004 /* PrintIntents.swift */,
+				B00000000000000000000006 /* Info.plist */,
+				B00000000000000000000007 /* PT210Print.entitlements */,
+				B0000000000000000000000C /* Assets.xcassets */,
+			);
+			path = PT210PrintApp;
+			sourceTree = "<group>";
+		};
+		D00000000000000000000012 /* PT210PrintShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000005 /* ShareViewController.swift */,
+				B0000000000000000000000A /* Info.plist */,
+				B0000000000000000000000B /* PT210PrintShare.entitlements */,
+			);
+			path = PT210PrintShareExtension;
+			sourceTree = "<group>";
+		};
+		D00000000000000000000013 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000009 /* PT210Print.app */,
+				B00000000000000000000008 /* PT210PrintShare.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D00000000000000000000002 /* PT210Print */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00000000000000000000002 /* Build configuration list for PBXNativeTarget "PT210Print" */;
+			buildPhases = (
+				C00000000000000000000005 /* Sources */,
+				C00000000000000000000003 /* Frameworks */,
+				C00000000000000000000007 /* Resources */,
+				C00000000000000000000002 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00000000000000000000004 /* PBXTargetDependency */,
+			);
+			name = PT210Print;
+			packageProductDependencies = (
+				E00000000000000000000001 /* PT210PrintCore */,
+			);
+			productName = PT210Print;
+			productReference = B00000000000000000000009 /* PT210Print.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D00000000000000000000003 /* PT210PrintShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00000000000000000000003 /* Build configuration list for PBXNativeTarget "PT210PrintShare" */;
+			buildPhases = (
+				C00000000000000000000006 /* Sources */,
+				C00000000000000000000004 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PT210PrintShare;
+			packageProductDependencies = (
+				E00000000000000000000002 /* PT210PrintCore */,
+			);
+			productName = PT210PrintShare;
+			productReference = B00000000000000000000008 /* PT210PrintShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					D00000000000000000000002 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					D00000000000000000000003 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = F00000000000000000000001 /* Build configuration list for PBXProject "PT210Print" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				nl,
+				fr,
+				de,
+				es,
+				it,
+				"pt-BR",
+			);
+			mainGroup = D00000000000000000000010;
+			packageReferences = (
+				E00000000000000000000003 /* XCLocalSwiftPackageReference "PT210PrintCore" */,
+			);
+			productRefGroup = D00000000000000000000013 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D00000000000000000000002 /* PT210Print */,
+				D00000000000000000000003 /* PT210PrintShare */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C00000000000000000000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000009 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C00000000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000001 /* PT210PrintApp.swift in Sources */,
+				A00000000000000000000002 /* AppModel.swift in Sources */,
+				A00000000000000000000003 /* ContentView.swift in Sources */,
+				A00000000000000000000004 /* PrintIntents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000005 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00000000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D00000000000000000000003 /* PT210PrintShare */;
+			targetProxy = C00000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F00000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		F00000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F00000000000000000000020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PT210PrintApp/PT210Print.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PT210PrintApp/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F00000000000000000000021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PT210PrintApp/PT210Print.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PT210PrintApp/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F00000000000000000000030 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PT210PrintShareExtension/PT210PrintShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PT210PrintShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F00000000000000000000031 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PT210PrintShareExtension/PT210PrintShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PT210PrintShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F00000000000000000000001 /* Build configuration list for PBXProject "PT210Print" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000010 /* Debug */,
+				F00000000000000000000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F00000000000000000000002 /* Build configuration list for PBXNativeTarget "PT210Print" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000020 /* Debug */,
+				F00000000000000000000021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F00000000000000000000003 /* Build configuration list for PBXNativeTarget "PT210PrintShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000030 /* Debug */,
+				F00000000000000000000031 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		E00000000000000000000003 /* XCLocalSwiftPackageReference "PT210PrintCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = PT210PrintCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E00000000000000000000001 /* PT210PrintCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E00000000000000000000003 /* XCLocalSwiftPackageReference "PT210PrintCore" */;
+			productName = PT210PrintCore;
+		};
+		E00000000000000000000002 /* PT210PrintCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E00000000000000000000003 /* XCLocalSwiftPackageReference "PT210PrintCore" */;
+			productName = PT210PrintCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = D00000000000000000000001 /* Project object */;
+}
