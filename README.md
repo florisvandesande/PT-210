@@ -39,15 +39,16 @@ Do not treat this build as production-ready until those checks pass on a physica
 
 All processing is local. The app has no server, account, analytics, cloud sync, or remote HTML resources.
 
-## Supported platform and languages
+## Supported platforms and languages
 
 - iPhone running iOS 27 or later.
+- Mac running macOS 27 or later through Mac Catalyst.
 - Developed and built with Xcode 27 and Swift 6.4.
 - The current hardware-test UI is English only. English, Dutch, French, German, Spanish, Italian, and Brazilian Portuguese are required before 1.0.
 
 ## Requirements
 
-- macOS with Xcode 27 or later;
+- macOS 27 or later with Xcode 27 or later;
 - an iPhone 15 Pro or another iPhone running iOS 27;
 - a PT-210 58 mm Bluetooth thermal printer and paper;
 - an Apple ID configured in Xcode for on-device development;
@@ -114,12 +115,56 @@ xcodebuild \
 
 A successful command ends with `** BUILD SUCCEEDED **`. Bluetooth cannot be validated in the simulator, so a successful build is not proof that printing works.
 
+Build the Mac Catalyst app from the repository root:
+
+```bash
+xcodebuild \
+  -project ios/PT210Print.xcodeproj \
+  -scheme PT210Print \
+  -configuration Debug \
+  -destination 'platform=macOS,variant=Mac Catalyst' \
+  -derivedDataPath .temporary/DerivedDataMacCatalyst \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+The build product is `.temporary/DerivedDataMacCatalyst/Build/Products/Debug-maccatalyst/PT210Print.app`. Open it in Finder or run it from Xcode with a Mac Catalyst destination. The Mac build uses the Files importer for images; the iOS Share Extension is not embedded in the Mac app.
+
+The unsigned build is suitable for checking the interface only. Mac Shortcuts validates the application's code signature before it communicates with App Intents, so an ad-hoc or unsigned copy can launch directly but will fail from Shortcuts. For Shortcuts testing, register the Mac in the Apple Developer account, select the `PT210Print` team in Xcode, and build with automatic signing:
+
+```bash
+xcodebuild \
+  -project ios/PT210Print.xcodeproj \
+  -scheme PT210Print \
+  -configuration Debug \
+  -destination 'platform=macOS,variant=Mac Catalyst' \
+  -derivedDataPath .temporary/DerivedDataMacCatalystSigned \
+  -allowProvisioningUpdates \
+  DEVELOPMENT_TEAM=YOUR_TEAM_ID \
+  CODE_SIGN_STYLE=Automatic \
+  build
+```
+
+Install the signed product from `.temporary/DerivedDataMacCatalystSigned/Build/Products/Debug-maccatalyst/PT210Print.app` in `/Applications`. After replacing an older copy, quit and reopen Shortcuts; if an existing action still shows the old communication error, remove that action from the Shortcut and add **Print text on PT-210**, **Print image on PT-210**, or **Print file on PT-210** again.
+
+## Shortcuts on Mac
+
+The app provides these actions to the Shortcuts app on both iOS and Mac Catalyst:
+
+- **Print text on PT-210** for plain text, Markdown, or HTML/CSS;
+- **Print image on PT-210** for supported image files;
+- **Print file on PT-210** for supported text, Markdown, HTML, or image files.
+
+On Mac Catalyst, a Shortcut brings PT-210 Print to the foreground before it accesses Bluetooth. The saved printer and print settings are used. To prepare a job without printing immediately, enable **Prepare for preview**; the job then appears in the app's prepared-jobs list.
+
+The iOS Share Extension remains available on iPhone but is intentionally not included in the Mac Catalyst app. On Mac, use the Files importer or one of the Shortcuts actions instead.
+
 ## Project structure
 
 ```text
 ios/
 ├── PT210Print.xcodeproj/          Xcode project and shared scheme
-├── PT210PrintApp/                 SwiftUI app and App Intents
+├── PT210PrintApp/                 SwiftUI app and App Intents for iOS and Mac Catalyst
 ├── PT210PrintShareExtension/      Share Sheet extension
 └── PT210PrintCore/                Shared local Swift package and tests
     ├── Sources/PT210PrintCore/
