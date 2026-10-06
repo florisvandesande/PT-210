@@ -1,5 +1,7 @@
 import PT210PrintCore
+#if !targetEnvironment(macCatalyst)
 import PhotosUI
+#endif
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -7,7 +9,9 @@ struct ContentView: View {
     @Bindable var model: AppModel
     @State private var showsPrinterSheet = false
     @State private var showsSettings = false
+#if !targetEnvironment(macCatalyst)
     @State private var selectedPhoto: PhotosPickerItem?
+#endif
     @State private var showsFileImporter = false
     @State private var pendingJobForDeletion: PrintJob?
 
@@ -86,9 +90,11 @@ struct ContentView: View {
                             .frame(minHeight: 180)
                         }
                         HStack {
+#if !targetEnvironment(macCatalyst)
                             PhotosPicker(selection: $selectedPhoto, matching: .images) {
                                 Label("Photos", systemImage: "photo.on.rectangle")
                             }
+#endif
                             Spacer()
                             Button("Files", systemImage: "folder") { showsFileImporter = true }
                         }
@@ -194,6 +200,7 @@ struct ContentView: View {
                     try await model.importImage(data: Data(contentsOf: url), suggestedName: url.lastPathComponent)
                 }
             }
+#if !targetEnvironment(macCatalyst)
             .onChange(of: selectedPhoto) { _, item in
                 guard let item else { return }
                 model.run {
@@ -203,6 +210,7 @@ struct ContentView: View {
                     try await model.importImage(data: data, suggestedName: "photo.heic")
                 }
             }
+#endif
             .onChange(of: model.printerSettings) { _, _ in model.markSettingsCustom() }
             .confirmationDialog(
                 "Delete prepared job?",

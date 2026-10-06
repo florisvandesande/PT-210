@@ -30,7 +30,14 @@ enum ShortcutImageScaling: String, AppEnum {
 struct PrintTextIntent: AppIntent {
     static let title: LocalizedStringResource = "Print text on PT-210"
     static let description = IntentDescription("Prints plain text, Markdown, or HTML using the saved PT-210 printer.")
+#if targetEnvironment(macCatalyst)
+    @available(macOS 26.0, iOS 26.0, *)
+    static let supportedModes: IntentModes = .foreground(.immediate)
+    @available(macOS 27.0, iOS 27.0, *)
+    static let allowedExecutionTargets: IntentExecutionTargets = .main
+#else
     static let openAppWhenRun = false
+#endif
 
     @Parameter(title: "Text") var text: String
     @Parameter(title: "Format", default: .plainText) var format: ShortcutTextFormat
@@ -66,7 +73,14 @@ struct PrintTextIntent: AppIntent {
 struct PrintImageIntent: AppIntent {
     static let title: LocalizedStringResource = "Print image on PT-210"
     static let description = IntentDescription("Prints a JPEG, PNG, HEIC, or HEIF image on the saved PT-210 printer.")
+#if targetEnvironment(macCatalyst)
+    @available(macOS 26.0, iOS 26.0, *)
+    static let supportedModes: IntentModes = .foreground(.immediate)
+    @available(macOS 27.0, iOS 27.0, *)
+    static let allowedExecutionTargets: IntentExecutionTargets = .main
+#else
     static let openAppWhenRun = false
+#endif
 
     @Parameter(title: "Image", supportedContentTypes: [.image]) var image: IntentFile
     @Parameter(title: "Quality", default: .imageHighQuality) var quality: ShortcutQuality
@@ -94,7 +108,14 @@ struct PrintImageIntent: AppIntent {
 struct PrintFileIntent: AppIntent {
     static let title: LocalizedStringResource = "Print file on PT-210"
     static let description = IntentDescription("Detects and prints a supported text, Markdown, HTML, or image file.")
+#if targetEnvironment(macCatalyst)
+    @available(macOS 26.0, iOS 26.0, *)
+    static let supportedModes: IntentModes = .foreground(.immediate)
+    @available(macOS 27.0, iOS 27.0, *)
+    static let allowedExecutionTargets: IntentExecutionTargets = .main
+#else
     static let openAppWhenRun = false
+#endif
 
     @Parameter(title: "File", supportedContentTypes: [.data, .text, .image, .html]) var file: IntentFile
     @Parameter(title: "Quality", default: .text) var quality: ShortcutQuality

@@ -14,7 +14,7 @@
 		A00000000000000000000005 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* ShareViewController.swift */; };
 		A00000000000000000000006 /* PT210PrintCore in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000001 /* PT210PrintCore */; };
 		A00000000000000000000007 /* PT210PrintCore in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000002 /* PT210PrintCore */; };
-		A00000000000000000000008 /* PT210PrintShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* PT210PrintShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A00000000000000000000008 /* PT210PrintShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* PT210PrintShare.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A00000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000C /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -245,6 +245,9 @@
 /* Begin PBXTargetDependency section */
 		D00000000000000000000004 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilters = (
+				ios,
+			);
 			target = D00000000000000000000003 /* PT210PrintShare */;
 			targetProxy = C00000000000000000000001 /* PBXContainerItemProxy */;
 		};
@@ -290,7 +293,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PT210PrintApp/PT210Print.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintApp/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -298,10 +301,12 @@
 				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				MACCATALYST_DEPLOYMENT_TARGET = 27.0;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 6;
 			};
 			name = Debug;
 		};
@@ -311,7 +316,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PT210PrintApp/PT210Print.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintApp/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -319,10 +324,12 @@
 				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				MACCATALYST_DEPLOYMENT_TARGET = 27.0;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 6;
 			};
 			name = Release;
 		};
@@ -332,7 +339,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PT210PrintShareExtension/PT210PrintShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
@@ -353,7 +360,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PT210PrintShareExtension/PT210PrintShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
