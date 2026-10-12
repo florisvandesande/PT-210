@@ -44,19 +44,21 @@ public actor PrintJobStore {
 
     public func importAsset(from source: URL, fileExtension: String) throws -> StoredImageReference {
         let filename = UUID().uuidString + "." + fileExtension.lowercased()
-        let destination = rootURL.appending(path: "Assets/\(filename)")
+        let destination = rootURL.appendingPathComponent("Assets").appendingPathComponent(filename)
         try fileManager.copyItem(at: source, to: destination)
         return StoredImageReference(filename: filename)
     }
 
     public func assetURL(for reference: StoredImageReference) -> URL {
-        rootURL.appending(path: "Assets/\(reference.filename)")
+        rootURL.appendingPathComponent("Assets").appendingPathComponent(reference.filename)
     }
 
     public func cleanup(now: Date = Date()) throws {
         let cutoff = now.addingTimeInterval(-7 * 24 * 60 * 60)
         for state in ["Completed", "Failed", "Temp"] {
-            let directory = rootURL.appending(path: state == "Temp" ? state : "Jobs/\(state)")
+            let directory = state == "Temp"
+                ? rootURL.appendingPathComponent(state)
+                : rootURL.appendingPathComponent("Jobs").appendingPathComponent(state)
             let files = try fileManager.contentsOfDirectory(
                 at: directory,
                 includingPropertiesForKeys: [.contentModificationDateKey]
@@ -74,7 +76,7 @@ public actor PrintJobStore {
             return nil
         })
         let assets = try fileManager.contentsOfDirectory(
-            at: rootURL.appending(path: "Assets"),
+            at: rootURL.appendingPathComponent("Assets"),
             includingPropertiesForKeys: [.contentModificationDateKey]
         )
         for asset in assets where !pendingAssets.contains(asset.lastPathComponent) {
@@ -88,14 +90,14 @@ public actor PrintJobStore {
     private static func prepareDirectories(fileManager: FileManager, rootURL: URL) throws {
         for path in ["Jobs/Pending", "Jobs/Completed", "Jobs/Failed", "Assets", "Temp", "Diagnostics"] {
             try fileManager.createDirectory(
-                at: rootURL.appending(path: path),
+                at: rootURL.appendingPathComponent(path),
                 withIntermediateDirectories: true
             )
         }
     }
 
     private func jobs(in state: String) throws -> [PrintJob] {
-        let directory = rootURL.appending(path: "Jobs/\(state)")
+        let directory = rootURL.appendingPathComponent("Jobs").appendingPathComponent(state)
         return try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "json" }
             .compactMap { try? JSONDecoder.printJobDecoder.decode(PrintJob.self, from: Data(contentsOf: $0)) }
@@ -111,7 +113,7 @@ public actor PrintJobStore {
     }
 
     private func jobURL(_ id: UUID, state: String) -> URL {
-        rootURL.appending(path: "Jobs/\(state)/\(id.uuidString).json")
+        rootURL.appendingPathComponent("Jobs").appendingPathComponent(state).appendingPathComponent("\(id.uuidString).json")
     }
 }
 

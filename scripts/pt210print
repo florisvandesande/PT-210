@@ -1,0 +1,357 @@
+#!/bin/zsh
+set -euo pipefail
+
+app_path="${PT210PRINT_APP_PATH:-/Users/florisvandesande/Applications/PT210Print.app}"
+user_home="${HOME:-/Users/$USER}"
+group_root="${PT210PRINT_GROUP_ROOT:-$user_home/Library/Group Containers/group.nl.florisvandesande.pt210print}"
+bridge_root="$group_root/Bridge"
+requests_root="$bridge_root/Requests"
+results_root="$bridge_root/Results"
+max_text_bytes=$((5 * 1024 * 1024))
+max_image_bytes=$((25 * 1024 * 1024))
+
+usage() {
+    cat <<'USAGE'
+Usage:
+  pt210print print --html FILE|- [--css FILE|--css-inline CSS]
+  pt210print print --text TEXT|-
+  pt210print print --markdown FILE
+  pt210print print --file FILE
+  pt210print print --image FILE
+
+Options:
+  --quality text|image-high-quality|custom
+  --copies NUMBER
+  --feed-lines NUMBER
+  --prepare
+  --timeout SECONDS
+  --json
+  --help
+
+The HTML form accepts '-' for standard input. CSS is read from a file or
+from --css-inline. The command waits until the app reports completion.
+USAGE
+}
+
+die() {
+    local code="$1"
+    shift
+    print -u2 -- "pt210print: $*"
+    exit "$code"
+}
+
+require_value() {
+    [[ $# -ge 2 && -n "$2" ]] || die 2 "option $1 requires a value"
+}
+
+file_extension() {
+    local path="$1"
+    local extension="${path##*.}"
+    [[ "$extension" != "$path" ]] || die 2 "file has no extension: $path"
+    print -r -- "${(L)extension}"
+}
+
+check_file() {
+    local path="$1"
+    [[ -f "$path" && -r "$path" ]] || die 2 "file is not readable: $path"
+}
+
+check_size() {
+    local path="$1"
+    local maximum="$2"
+    local size
+    size="$(/usr/bin/wc -c < "$path" | tr -d '[:space:]')"
+    (( size <= maximum )) || die 2 "input is too large: $path"
+}
+
+normalize_quality() {
+    case "$1" in
+        text) print -r -- "text" ;;
+        image-high-quality|imageHighQuality) print -r -- "imageHighQuality" ;;
+        custom) print -r -- "custom" ;;
+        fast) print -r -- "fast" ;;
+        balanced) print -r -- "balanced" ;;
+        high-quality|highQuality) print -r -- "highQuality" ;;
+        *) die 2 "unsupported quality: $1" ;;
+    esac
+}
+
+[[ $# -gt 0 ]] || { usage; exit 2; }
+if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    usage
+    exit 0
+fi
+[[ "$1" == "print" ]] || die 2 "the only supported command is: print"
+shift
+
+source_kind=""
+html_source=""
+text_value=""
+payload_source=""
+css_source=""
+css_inline=""
+quality=""
+copies=1
+feed_lines=3
+prepare=false
+timeout_seconds=300
+json_output=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --html)
+            require_value "$@"
+            [[ -z "$source_kind" ]] || die 2 "only one content source may be supplied"
+            source_kind="html"
+            html_source="$2"
+            shift 2
+            ;;
+        --text)
+            require_value "$@"
+            [[ -z "$source_kind" ]] || die 2 "only one content source may be supplied"
+            source_kind="text"
+            text_value="$2"
+            shift 2
+            ;;
+        --markdown)
+            require_value "$@"
+            [[ -z "$source_kind" ]] || die 2 "only one content source may be supplied"
+            source_kind="markdown"
+            payload_source="$2"
+            shift 2
+            ;;
+        --file)
+            require_value "$@"
+            [[ -z "$source_kind" ]] || die 2 "only one content source may be supplied"
+            source_kind="file"
+            payload_source="$2"
+            shift 2
+            ;;
+        --image)
+            require_value "$@"
+            [[ -z "$source_kind" ]] || die 2 "only one content source may be supplied"
+            source_kind="image"
+            payload_source="$2"
+            shift 2
+            ;;
+        --css)
+            require_value "$@"
+            [[ -z "$css_source" && -z "$css_inline" ]] || die 2 "use only one CSS source"
+            css_source="$2"
+            shift 2
+            ;;
+        --css-inline)
+            require_value "$@"
+            [[ -z "$css_source" && -z "$css_inline" ]] || die 2 "use only one CSS source"
+            css_inline="$2"
+            shift 2
+            ;;
+        --quality)
+            require_value "$@"
+            quality="$(normalize_quality "$2")"
+            shift 2
+            ;;
+        --copies)
+            require_value "$@"
+            [[ "$2" == <-> && $2 -ge 1 && $2 -le 20 ]] || die 2 "copies must be between 1 and 20"
+            copies="$2"
+            shift 2
+            ;;
+        --feed-lines)
+            require_value "$@"
+            [[ "$2" == <-> && $2 -ge 0 && $2 -le 20 ]] || die 2 "feed-lines must be between 0 and 20"
+            feed_lines="$2"
+            shift 2
+            ;;
+        --prepare)
+            prepare=true
+            shift
+            ;;
+        --timeout)
+            require_value "$@"
+            [[ "$2" == <-> && $2 -ge 1 && $2 -le 3600 ]] || die 2 "timeout must be between 1 and 3600 seconds"
+            timeout_seconds="$2"
+            shift 2
+            ;;
+        --json)
+            json_output=true
+            shift
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            die 2 "unknown option: $1"
+            ;;
+    esac
+done
+
+[[ -n "$source_kind" ]] || die 2 "one content source is required"
+[[ -d "$app_path" ]] || die 3 "PT210Print.app was not found at $app_path"
+if [[ -n "$css_source" || -n "$css_inline" ]] && [[ "$source_kind" != "html" ]]; then
+    die 2 "CSS can only be supplied with --html"
+fi
+
+if [[ -z "$quality" ]]; then
+    if [[ "$source_kind" == "image" ]]; then
+        quality="imageHighQuality"
+    else
+        quality="text"
+    fi
+fi
+
+if [[ "$source_kind" == "html" && "$html_source" != "-" ]]; then
+    check_file "$html_source"
+elif [[ "$source_kind" == "html" ]]; then
+    [[ -t 0 ]] && die 2 "--html - requires HTML on standard input"
+fi
+
+if [[ "$source_kind" == "text" && "$text_value" == "-" ]]; then
+    [[ -t 0 ]] && die 2 "--text - requires text on standard input"
+elif [[ "$source_kind" == "markdown" || "$source_kind" == "file" || "$source_kind" == "image" ]]; then
+    check_file "$payload_source"
+fi
+
+if [[ -n "$css_source" ]]; then
+    check_file "$css_source"
+    check_size "$css_source" "$max_text_bytes"
+fi
+
+if [[ "$source_kind" == "file" || "$source_kind" == "image" ]]; then
+    payload_extension="$(file_extension "$payload_source")"
+    case "$payload_extension" in
+        txt|md|markdown|html|htm|jpg|jpeg|png|heic|heif) ;;
+        *) die 2 "unsupported file extension: .$payload_extension" ;;
+    esac
+    if [[ "$source_kind" == "image" ]]; then
+        case "$payload_extension" in
+            jpg|jpeg|png|heic|heif) ;;
+            *) die 2 "--image requires JPEG, PNG, HEIC, or HEIF" ;;
+        esac
+        check_size "$payload_source" "$max_image_bytes"
+    else
+        case "$payload_extension" in
+            jpg|jpeg|png|heic|heif) check_size "$payload_source" "$max_image_bytes" ;;
+            *) check_size "$payload_source" "$max_text_bytes" ;;
+        esac
+    fi
+else
+    payload_extension=""
+fi
+
+if [[ "$source_kind" == "html" || "$source_kind" == "text" || "$source_kind" == "markdown" ]]; then
+    if [[ "$source_kind" == "html" && "$html_source" != "-" ]]; then
+        check_size "$html_source" "$max_text_bytes"
+    elif [[ "$source_kind" == "markdown" ]]; then
+        check_size "$payload_source" "$max_text_bytes"
+    fi
+fi
+
+umask 077
+/bin/mkdir -p "$requests_root" "$results_root"
+request_id="$(/usr/bin/uuidgen | tr '[:lower:]' '[:upper:]')"
+request_dir="$requests_root/$request_id"
+/bin/mkdir "$request_dir"
+
+cleanup_request() {
+    if [[ -d "$request_dir" ]]; then
+        /bin/rm -rf "$request_dir"
+    fi
+}
+
+if [[ "$source_kind" == "html" ]]; then
+    if [[ "$html_source" == "-" ]]; then
+        /bin/cat > "$request_dir/html"
+    else
+        /bin/cp "$html_source" "$request_dir/html"
+    fi
+    if [[ -n "$css_source" ]]; then
+        /bin/cp "$css_source" "$request_dir/css"
+    elif [[ -n "$css_inline" ]]; then
+        print -rn -- "$css_inline" > "$request_dir/css"
+    fi
+elif [[ "$source_kind" == "text" ]]; then
+    if [[ "$text_value" == "-" ]]; then
+        /bin/cat > "$request_dir/input"
+    else
+        print -rn -- "$text_value" > "$request_dir/input"
+    fi
+elif [[ "$source_kind" == "markdown" || "$source_kind" == "file" || "$source_kind" == "image" ]]; then
+    /bin/cp "$payload_source" "$request_dir/input"
+fi
+
+manifest_tmp="$request_dir/.request.plist.tmp"
+{
+    print -r -- '<?xml version="1.0" encoding="UTF-8"?>'
+    print -r -- '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+    print -r -- '<plist version="1.0"><dict>'
+    print -r -- '<key>version</key><integer>1</integer>'
+    print -r -- "<key>id</key><string>$request_id</string>"
+    print -r -- "<key>contentKind</key><string>$source_kind</string>"
+    print -r -- "<key>qualityPresetID</key><string>$quality</string>"
+    print -r -- "<key>copies</key><integer>$copies</integer>"
+    print -r -- "<key>feedLinesAfter</key><integer>$feed_lines</integer>"
+    if [[ "$prepare" == true ]]; then
+        print -r -- '<key>prepare</key><true/>'
+    else
+        print -r -- '<key>prepare</key><false/>'
+    fi
+    if [[ "$source_kind" == "html" ]]; then
+        print -r -- '<key>htmlFilename</key><string>html</string>'
+        if [[ -f "$request_dir/css" ]]; then
+            print -r -- '<key>cssFilename</key><string>css</string>'
+        fi
+    else
+        print -r -- '<key>payloadFilename</key><string>input</string>'
+        if [[ -n "$payload_extension" ]]; then
+            print -r -- "<key>payloadExtension</key><string>$payload_extension</string>"
+        fi
+    fi
+    print -r -- '</dict></plist>'
+} > "$manifest_tmp"
+/bin/mv "$manifest_tmp" "$request_dir/request.plist"
+
+if ! /usr/bin/open -g "$app_path" >/dev/null 2>&1; then
+    cleanup_request
+    die 3 "could not open PT210Print.app"
+fi
+if ! /usr/bin/open -g "pt210print://job?id=$request_id" >/dev/null 2>&1; then
+    cleanup_request
+    die 3 "could not send the request to PT210Print.app"
+fi
+
+result_file="$results_root/$request_id.json"
+deadline=$((SECONDS + timeout_seconds))
+result_data=""
+result_status=""
+while (( SECONDS <= deadline )); do
+    if [[ -f "$result_file" ]]; then
+        result_data="$(<"$result_file")"
+        result_status="$(/usr/bin/plutil -extract status raw -o - "$result_file" 2>/dev/null || true)"
+        if [[ "$result_status" == "completed" || "$result_status" == "prepared" || "$result_status" == "failed" ]]; then
+            break
+        fi
+    fi
+    /bin/sleep 0.1
+done
+
+if [[ "$result_status" != "completed" && "$result_status" != "prepared" && "$result_status" != "failed" ]]; then
+    print -u2 -- "pt210print: timed out waiting for PT-210 Print (request $request_id)"
+    cleanup_request
+    exit 3
+fi
+
+message="$(/usr/bin/plutil -extract message raw -o - "$result_file" 2>/dev/null || true)"
+if [[ "$json_output" == true ]]; then
+    print -r -- "$result_data"
+elif [[ -n "$message" ]]; then
+    print -r -- "PT-210 Print: $message"
+else
+    print -r -- "PT-210 Print: $result_status"
+fi
+
+cleanup_request
+/bin/rm -f "$result_file"
+[[ "$result_status" == "failed" ]] && exit 4
+exit 0

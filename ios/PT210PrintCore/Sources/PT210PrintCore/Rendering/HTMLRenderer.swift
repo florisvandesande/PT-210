@@ -11,7 +11,11 @@ public final class HTMLRenderer: NSObject, WKNavigationDelegate {
         guard html.utf8.count <= ContentDetector.maximumTextBytes else { throw PrintError.inputTooLarge }
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = false
+        if #available(iOS 14.0, macCatalyst 14.0, *) {
+            configuration.defaultWebpagePreferences.allowsContentJavaScript = false
+        } else {
+            configuration.preferences.javaScriptEnabled = false
+        }
         let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: width, height: 1), configuration: configuration)
         webView.navigationDelegate = self
         self.webView = webView
@@ -36,7 +40,13 @@ public final class HTMLRenderer: NSObject, WKNavigationDelegate {
                 let height = min(max((rawHeight as? NSNumber)?.doubleValue ?? 1, 1), 30_000)
                 webView.frame.size.height = height
                 let image = try await webView.takeSnapshot(configuration: nil)
+#if canImport(UIKit)
                 guard let cgImage = image.cgImage else { throw PrintError.renderFailed }
+#else
+                guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                    throw PrintError.renderFailed
+                }
+#endif
                 finish(with: .success(cgImage))
             } catch {
                 finish(with: .failure(error))

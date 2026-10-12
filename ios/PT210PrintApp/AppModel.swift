@@ -1,11 +1,10 @@
-import Observation
+import Combine
 import PT210PrintCore
 import SwiftUI
 import UIKit
 
 @MainActor
-@Observable
-final class AppModel {
+final class AppModel: ObservableObject {
     enum QualityPreset: String, CaseIterable, Identifiable {
         case text
         case imageHighQuality
@@ -38,31 +37,44 @@ final class AppModel {
         }
     }
 
-    let bluetooth = PT210BluetoothManager()
-    @ObservationIgnored private(set) lazy var executor = PrintJobExecutor(bluetooth: bluetooth)
-    @ObservationIgnored private let settingsStore = SharedSettingsStore()
-    @ObservationIgnored private let jobStore: PrintJobStore?
-    @ObservationIgnored private var currentTask: Task<Void, Never>?
-    var editorMode: EditorMode = .text
-    var text = String(localized: "Hello from PT-210 Print")
-    var css = "h1 { text-align: center; }"
-    var copies = 1
-    var feedLines = 3
-    var isWorking = false
-    var errorMessage: String?
-    var successMessage: String?
-    var selectedImageURL: URL?
-    var selectedImageName: String?
-    var thermalPreview: UIImage?
-    var showsPreview = false
-    var printerSettings = PrinterSettings.highQualityText
-    var qualityPreset: QualityPreset = .text
-    var pendingJobs: [PrintJob] = []
-    var activePendingJob: PrintJob?
-    var showsOnboarding = !UserDefaults.standard.bool(forKey: "completed-onboarding-v1")
+    @Published var bluetooth = PT210BluetoothManager()
+    private(set) lazy var executor = PrintJobExecutor(bluetooth: bluetooth)
+    private let settingsStore = SharedSettingsStore()
+    private let jobStore: PrintJobStore?
+    private lazy var shellStore: ShellPrintBridgeStore? = try? ShellPrintBridgeStore()
+    private lazy var shellBridge = ShellBridgeCoordinator { [weak self] request in
+        guard let self else { throw PrintError.storageUnavailable }
+        return try await self.performShellRequest(request)
+    }
+    private var currentTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
+    @Published var editorMode: EditorMode = .text
+    @Published var text = pt210Localized("Hello from PT-210 Print")
+    @Published var css = "h1 { text-align: center; }"
+    @Published var copies = 1
+    @Published var feedLines = 3
+    @Published var isWorking = false
+    @Published var errorMessage: String?
+    @Published var successMessage: String?
+    @Published var selectedImageURL: URL?
+    @Published var selectedImageName: String?
+    @Published var thermalPreview: UIImage?
+    @Published var showsPreview = false
+    @Published var printerSettings = PrinterSettings.highQualityText
+    @Published var qualityPreset: QualityPreset = .text
+    @Published var pendingJobs: [PrintJob] = []
+    @Published var activePendingJob: PrintJob?
+    @Published var showsOnboarding = !UserDefaults.standard.bool(forKey: "completed-onboarding-v1")
 
     init() {
         jobStore = try? PrintJobStore()
+        bluetooth.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        _ = executor
+        executor.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
         Task { @MainActor in
             if let loaded = try? await settingsStore.load() {
                 printerSettings = loaded
@@ -114,7 +126,7 @@ final class AppModel {
                 self.activePendingJob = nil
                 self.pendingJobs = try await store.loadPending()
             }
-            self.successMessage = String(localized: "Printed successfully")
+            self.successMessage = pt210Localized("Printed successfully")
         }
     }
 
@@ -145,18 +157,18 @@ final class AppModel {
                 let url = await self.jobStore?.assetURL(for: reference)
                 guard self.activePendingJob?.id == job.id else { return }
                 guard let url, FileManager.default.fileExists(atPath: url.path) else {
-                    self.errorMessage = String(localized: "The prepared image is missing. Delete this job and prepare it again.")
+                    self.errorMessage = pt210Localized("The prepared image is missing. Delete this job and prepare it again.")
                     return
                 }
                 self.selectedImageURL = url
-                self.successMessage = String(localized: "Prepared job opened")
+                self.successMessage = pt210Localized("Prepared job opened")
             }
         }
         thermalPreview = nil
         if case .image = job.content {
             // The image asset is resolved asynchronously above.
         } else {
-            successMessage = String(localized: "Prepared job opened")
+            successMessage = pt210Localized("Prepared job opened")
         }
     }
 
@@ -228,7 +240,7 @@ final class AppModel {
     func saveSettings() {
         run {
             try await self.settingsStore.save(self.printerSettings)
-            self.successMessage = String(localized: "Settings saved")
+            self.successMessage = pt210Localized("Settings saved")
             self.thermalPreview = nil
         }
     }
@@ -263,7 +275,7 @@ final class AppModel {
         run {
             let job = PrintJob(content: .html(html: html, css: css), qualityPresetID: "text", source: .mainApp)
             try await self.executor.execute(job)
-            self.successMessage = String(localized: "Test page printed")
+            self.successMessage = pt210Localized("Test page printed")
         }
     }
 
@@ -281,7 +293,7 @@ final class AppModel {
                 imageURL: url,
                 variants: CalibrationVariant.advancedQualityRound
             )
-            self.successMessage = String(localized: "Image quality comparison printed")
+            self.successMessage = pt210Localized("Image quality comparison printed")
         }
     }
 
@@ -307,6 +319,10 @@ final class AppModel {
         }
     }
 
+    func handleShellURL(_ url: URL) {
+        shellBridge.handle(url: url)
+    }
+
     func cancelCurrentOperation() {
         currentTask?.cancel()
     }
@@ -315,7 +331,7 @@ final class AppModel {
         // CoreBluetooth publishes its initial state shortly after the manager
         // is created. Waiting avoids a false unavailable error at launch.
         for _ in 0..<30 where bluetooth.state == .unknown {
-            try? await Task.sleep(for: .milliseconds(100))
+            try? await Task.sleep(nanoseconds: 100 * 1_000_000)
         }
         guard bluetooth.state == .disconnected else { return }
         try? await bluetooth.reconnectSavedPrinter()
@@ -361,4 +377,111 @@ final class AppModel {
             do { try await operation() } catch { errorMessage = error.localizedDescription }
         }
     }
+
+    private func performShellRequest(_ request: ShellPrintRequest) async throws -> UUID? {
+        guard !isWorking else { throw ShellPrintBridgeError.busy }
+        guard let shellStore, let jobStore else { throw PrintError.storageUnavailable }
+
+        isWorking = true
+        errorMessage = nil
+        successMessage = nil
+        defer { isWorking = false }
+
+        let (job, assetURL, temporaryURL) = try await makeShellJob(request, shellStore: shellStore, jobStore: jobStore)
+        defer {
+            if let temporaryURL { try? FileManager.default.removeItem(at: temporaryURL) }
+        }
+
+        if request.prepare {
+            try await jobStore.savePending(job)
+            pendingJobs = try await jobStore.loadPending()
+            successMessage = pt210Localized("Print job prepared")
+            return job.id
+        }
+
+        try await bluetooth.ensureReadyForPrint()
+        try await executor.execute(job, assetURL: assetURL)
+        successMessage = pt210Localized("Printed successfully")
+        return job.id
+    }
+
+    private func makeShellJob(
+        _ request: ShellPrintRequest,
+        shellStore: ShellPrintBridgeStore,
+        jobStore: PrintJobStore
+    ) async throws -> (job: PrintJob, assetURL: URL?, temporaryURL: URL?) {
+        let qualityPresetID = request.qualityPresetID
+            ?? (request.contentKind == .image ? "imageHighQuality" : "text")
+        let content: PrintContent
+        var assetURL: URL?
+        var temporaryURL: URL?
+
+        switch request.contentKind {
+        case .text:
+            let data = try await shellStore.payloadData(for: request, filename: request.payloadFilename ?? "input")
+            guard data.count <= ContentDetector.maximumTextBytes,
+                  let value = String(data: data, encoding: .utf8) else { throw PrintError.unsupportedContent }
+            content = .plainText(value)
+        case .markdown:
+            let data = try await shellStore.payloadData(for: request, filename: request.payloadFilename ?? "input")
+            guard data.count <= ContentDetector.maximumTextBytes,
+                  let value = String(data: data, encoding: .utf8) else { throw PrintError.unsupportedContent }
+            content = .markdown(value)
+        case .html:
+            let htmlData = try await shellStore.payloadData(for: request, filename: request.htmlFilename ?? "html")
+            guard htmlData.count <= ContentDetector.maximumTextBytes,
+                  let html = String(data: htmlData, encoding: .utf8) else { throw PrintError.unsupportedContent }
+            let css: String?
+            if let cssFilename = request.cssFilename {
+                let cssData = try await shellStore.payloadData(for: request, filename: cssFilename)
+                guard cssData.count <= ContentDetector.maximumTextBytes,
+                      let value = String(data: cssData, encoding: .utf8) else { throw PrintError.unsupportedContent }
+                css = value
+            } else {
+                css = nil
+            }
+            content = .html(html: html, css: css)
+        case .file, .image:
+            guard let extensionName = request.payloadExtension?.lowercased() else {
+                throw ShellPrintBridgeError.invalidRequest
+            }
+            let data = try await shellStore.payloadData(for: request, filename: request.payloadFilename ?? "input")
+            guard data.count <= 25 * 1_024 * 1_024 else { throw PrintError.inputTooLarge }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("pt210-shell-\(UUID().uuidString)")
+                .appendingPathExtension(extensionName)
+            try data.write(to: url, options: .atomic)
+            temporaryURL = url
+
+            let isImage = ["jpg", "jpeg", "png", "heic", "heif"].contains(extensionName)
+            if isImage {
+                if request.prepare {
+                    let reference = try await jobStore.importAsset(from: url, fileExtension: extensionName)
+                    content = .image(reference)
+                    assetURL = await jobStore.assetURL(for: reference)
+                } else {
+                    content = .image(StoredImageReference(filename: url.lastPathComponent))
+                    assetURL = url
+                }
+            } else {
+                content = try ContentDetector.content(for: url)
+            }
+        }
+
+        return (
+            PrintJob(
+                content: content,
+                qualityPresetID: qualityPresetID,
+                copies: request.copies,
+                feedLinesAfter: request.feedLinesAfter,
+                source: .shell
+            ),
+            assetURL,
+            temporaryURL
+        )
+    }
+}
+
+func pt210Localized(_ key: String) -> String {
+    NSLocalizedString(key, bundle: .main, comment: "")
 }

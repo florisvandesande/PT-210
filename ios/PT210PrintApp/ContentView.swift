@@ -1,12 +1,50 @@
+#if targetEnvironment(macCatalyst)
 import PT210PrintCore
-#if !targetEnvironment(macCatalyst)
+import SwiftUI
+
+struct ContentView: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("PT-210 Print").font(.title)
+            Text(model.bluetooth.connectedPrinterName ?? "No PT-210 connected")
+            TextField("Text to print", text: $model.text)
+                .frame(minHeight: 44)
+            HStack(spacing: 12) {
+                Button("Search") { model.bluetooth.startScan() }
+                Button("Print") { model.printCurrent() }
+                Button("Preview") { model.makePreview() }
+            }
+            if model.isWorking {
+                Text("Working…")
+            }
+            if let message = model.errorMessage {
+                Text(message)
+            }
+            if let message = model.successMessage {
+                Text(message)
+            }
+            if !model.bluetooth.discoveredPrinters.isEmpty {
+                Text("Printers")
+                ForEach(model.bluetooth.discoveredPrinters.prefix(3)) { printer in
+                    Button("\(printer.name)  \(printer.rssi) dBm") {
+                        model.run { try await model.bluetooth.connect(to: printer.id) }
+                    }
+                }
+            }
+        }
+        .padding(24)
+    }
+}
+#else
+import PT210PrintCore
 import PhotosUI
-#endif
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    @Bindable var model: AppModel
+    @ObservedObject var model: AppModel
     @State private var showsPrinterSheet = false
     @State private var showsSettings = false
 #if !targetEnvironment(macCatalyst)
@@ -16,152 +54,18 @@ struct ContentView: View {
     @State private var pendingJobForDeletion: PrintJob?
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             Form {
-                if !model.pendingJobs.isEmpty {
-                    Section("Prepared jobs") {
-                        ForEach(model.pendingJobs) { job in
-                            Button {
-                                model.openPendingJob(job)
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(pendingTitle(job))
-                                        Text(job.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if model.activePendingJob?.id == job.id {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(.green)
-                                            .accessibilityLabel("Selected")
-                                    }
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button("Delete job", systemImage: "trash", role: .destructive) {
-                                    pendingJobForDeletion = job
-                                }
-                            }
-                            .swipeActions {
-                                Button("Delete", role: .destructive) { model.deletePending(job) }
-                            }
-                        }
-                    }
-                }
-                Section {
-                    Button {
-                        showsPrinterSheet = true
-                    } label: {
-                        LabeledContent("Printer", value: printerStatus)
-                    }
-                    .accessibilityHint("Find or manage the PT-210 printer")
-                }
-
-                Section("Content") {
-                    Picker("Format", selection: $model.editorMode) {
-                        ForEach(AppModel.EditorMode.allCases) { mode in
-                            Text(mode.title).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: model.editorMode) { _, mode in model.applyRecommendedProfile(for: mode) }
-                    if model.editorMode == .image {
-                        if let url = model.selectedImageURL,
-                           let image = UIImage(contentsOfFile: url.path()) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 260)
-                                .frame(maxWidth: .infinity)
-                                .accessibilityLabel("Selected image")
-                            Text(model.selectedImageName ?? "Selected image")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ContentUnavailableView(
-                                "Choose an image",
-                                systemImage: "photo",
-                                description: Text("JPEG, PNG, HEIC, and HEIF are supported.")
-                            )
-                            .frame(minHeight: 180)
-                        }
-                        HStack {
-#if !targetEnvironment(macCatalyst)
-                            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                                Label("Photos", systemImage: "photo.on.rectangle")
-                            }
-#endif
-                            Spacer()
-                            Button("Files", systemImage: "folder") { showsFileImporter = true }
-                        }
-                        Picker("Scaling", selection: $model.printerSettings.render.imageScaling) {
-                            Text("Fit width").tag(ImageScalingMode.fitWidth)
-                            Text("Actual size").tag(ImageScalingMode.actualSize)
-                            Text("Center").tag(ImageScalingMode.center)
-                            Text("Square crop").tag(ImageScalingMode.cropToWidth)
-                        }
-                        DisclosureGroup("Image adjustments") {
-                            imageAdjustment("Brightness", value: $model.printerSettings.quality.brightness, range: -1...1)
-                            imageAdjustment("Contrast", value: $model.printerSettings.quality.contrast, range: 0.5...2.5)
-                            imageAdjustment("Gamma", value: $model.printerSettings.quality.gamma, range: 0.2...3)
-                            imageAdjustment("Threshold", value: $model.printerSettings.quality.threshold, range: 0.1...0.9)
-                            Picker("Dithering", selection: $model.printerSettings.quality.dithering) {
-                                Text("Threshold").tag(DitheringAlgorithm.threshold)
-                                Text("Floyd–Steinberg").tag(DitheringAlgorithm.floydSteinberg)
-                                Text("Atkinson").tag(DitheringAlgorithm.atkinson)
-                                Text("Bayer 4×4").tag(DitheringAlgorithm.bayer4x4)
-                            }
-                            Toggle("Invert black and white", isOn: $model.printerSettings.quality.invert)
-                        }
-                    } else {
-                        TextEditor(text: $model.text)
-                            .frame(minHeight: 220)
-                            .font(.body.monospaced(model.editorMode == .html))
-                            .accessibilityLabel("Print content")
-                        if model.editorMode == .html {
-                            TextField("CSS", text: $model.css, axis: .vertical)
-                                .font(.body.monospaced())
-                        }
-                    }
-                }
-
-                Section("Print options") {
-                    Stepper("Copies: \(model.copies)", value: $model.copies, in: 1...20)
-                    Stepper("Feed lines: \(model.feedLines)", value: $model.feedLines, in: 0...20)
-                }
-
-                Section {
-                    Button("Thermal preview", systemImage: "eye", action: model.makePreview)
-                        .disabled(model.isWorking || !model.canPrint)
-                    Button(action: model.printCurrent) {
-                        HStack {
-                            Spacer()
-                            if model.isWorking { ProgressView().padding(.trailing, 8) }
-                            Text("Print")
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                    }
-                    .disabled(model.isWorking || !model.canPrint)
-                    if model.isWorking {
-                        Button("Cancel current operation", role: .destructive, action: model.cancelCurrentOperation)
-                    }
-                }
-
-                if let message = model.errorMessage {
-                    Section { Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red) }
-                }
-                if let message = model.successMessage {
-                    Section { Label(message, systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
-                }
+                preparedJobsSection
+                printerSection
+                contentSection
+                printOptionsSection
+                printActionsSection
+                messageSections
             }
             .navigationTitle("PT-210 Print")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .automatic) {
                     Button("Settings", systemImage: "gearshape") { showsSettings = true }
                 }
             }
@@ -172,7 +76,7 @@ struct ContentView: View {
                     .interactiveDismissDisabled()
             }
             .sheet(isPresented: $model.showsPreview) {
-                NavigationStack {
+                NavigationView {
                     ScrollView {
                         if let preview = model.thermalPreview {
                             Image(uiImage: preview)
@@ -201,7 +105,7 @@ struct ContentView: View {
                 }
             }
 #if !targetEnvironment(macCatalyst)
-            .onChange(of: selectedPhoto) { _, item in
+            .onChange(of: selectedPhoto) { item in
                 guard let item else { return }
                 model.run {
                     guard let data = try await item.loadTransferable(type: Data.self) else {
@@ -211,7 +115,7 @@ struct ContentView: View {
                 }
             }
 #endif
-            .onChange(of: model.printerSettings) { _, _ in model.markSettingsCustom() }
+            .onChange(of: model.printerSettings) { _ in model.markSettingsCustom() }
             .confirmationDialog(
                 "Delete prepared job?",
                 isPresented: Binding(
@@ -231,35 +135,218 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
+    private var preparedJobsSection: some View {
+        if !model.pendingJobs.isEmpty {
+            Section("Prepared jobs") {
+                ForEach(model.pendingJobs) { job in
+                    Button {
+                        model.openPendingJob(job)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(pendingTitle(job))
+                                Text(Self.jobDateFormatter.string(from: job.createdAt))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if model.activePendingJob?.id == job.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .accessibilityLabel("Selected")
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Delete job", systemImage: "trash", role: .destructive) {
+                            pendingJobForDeletion = job
+                        }
+                    }
+                    .swipeActions {
+                        Button("Delete", role: .destructive) { model.deletePending(job) }
+                    }
+                }
+            }
+        }
+    }
+
+    private var printerSection: some View {
+        Section {
+            Button { showsPrinterSheet = true } label: {
+                LabeledContent("Printer", value: printerStatus)
+            }
+            .accessibilityHint("Find or manage the PT-210 printer")
+        }
+    }
+
+    @ViewBuilder
+    private var contentSection: some View {
+        Section("Content") {
+            Picker("Format", selection: $model.editorMode) {
+                ForEach(AppModel.EditorMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: model.editorMode) { mode in model.applyRecommendedProfile(for: mode) }
+            if model.editorMode == .image {
+                imageEditor
+            } else {
+                textEditor
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var imageEditor: some View {
+        if let url = model.selectedImageURL, let image = UIImage(contentsOfFile: url.path()) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxHeight: 260)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Selected image")
+            Text(model.selectedImageName ?? "Selected image")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        } else {
+            VStack(spacing: 8) {
+                Image(systemName: "photo").font(.title)
+                Text("Choose an image")
+                Text("JPEG, PNG, HEIC, and HEIF are supported.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 180)
+        }
+        HStack {
+#if !targetEnvironment(macCatalyst)
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Label("Photos", systemImage: "photo.on.rectangle")
+            }
+#endif
+            Spacer()
+            Button("Files", systemImage: "folder") { showsFileImporter = true }
+        }
+        Picker("Scaling", selection: $model.printerSettings.render.imageScaling) {
+            Text("Fit width").tag(ImageScalingMode.fitWidth)
+            Text("Actual size").tag(ImageScalingMode.actualSize)
+            Text("Center").tag(ImageScalingMode.center)
+            Text("Square crop").tag(ImageScalingMode.cropToWidth)
+        }
+        DisclosureGroup("Image adjustments") {
+            imageAdjustment("Brightness", value: $model.printerSettings.quality.brightness, range: -1...1)
+            imageAdjustment("Contrast", value: $model.printerSettings.quality.contrast, range: 0.5...2.5)
+            imageAdjustment("Gamma", value: $model.printerSettings.quality.gamma, range: 0.2...3)
+            imageAdjustment("Threshold", value: $model.printerSettings.quality.threshold, range: 0.1...0.9)
+            Picker("Dithering", selection: $model.printerSettings.quality.dithering) {
+                Text("Threshold").tag(DitheringAlgorithm.threshold)
+                Text("Floyd–Steinberg").tag(DitheringAlgorithm.floydSteinberg)
+                Text("Atkinson").tag(DitheringAlgorithm.atkinson)
+                Text("Bayer 4×4").tag(DitheringAlgorithm.bayer4x4)
+            }
+            Toggle("Invert black and white", isOn: $model.printerSettings.quality.invert)
+        }
+    }
+
+    @ViewBuilder
+    private var textEditor: some View {
+        TextEditor(text: $model.text)
+            .frame(minHeight: 220)
+            .font(.system(size: 17, design: model.editorMode == .html ? .monospaced : .default))
+            .accessibilityLabel("Print content")
+        if model.editorMode == .html {
+            TextField("CSS", text: $model.css)
+                .font(.system(size: 17, design: .monospaced))
+        }
+    }
+
+    private var printOptionsSection: some View {
+        Section("Print options") {
+            Stepper("Copies: \(model.copies)", value: $model.copies, in: 1...20)
+            Stepper("Feed lines: \(model.feedLines)", value: $model.feedLines, in: 0...20)
+        }
+    }
+
+    @ViewBuilder
+    private var printActionsSection: some View {
+        Section {
+            Button("Thermal preview", systemImage: "eye", action: model.makePreview)
+                .disabled(model.isWorking || !model.canPrint)
+            Button(action: model.printCurrent) {
+                HStack {
+                    Spacer()
+                    if model.isWorking { ProgressView().padding(.trailing, 8) }
+                    Text("Print").fontWeight(.semibold)
+                    Spacer()
+                }
+            }
+            .disabled(model.isWorking || !model.canPrint)
+            if model.isWorking {
+                Button("Cancel current operation", role: .destructive, action: model.cancelCurrentOperation)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var messageSections: some View {
+        if let message = model.errorMessage {
+            Section { Label(message, systemImage: "exclamationmark.triangle.fill").foregroundColor(.red) }
+        }
+        if let message = model.successMessage {
+            Section { Label(message, systemImage: "checkmark.circle.fill").foregroundColor(.green) }
+        }
+    }
+
     private func imageAdjustment(
         _ title: LocalizedStringKey,
         value: Binding<Double>,
         range: ClosedRange<Double>
     ) -> some View {
         VStack(alignment: .leading) {
-            LabeledContent(title, value: value.wrappedValue.formatted(.number.precision(.fractionLength(2))))
+            LabeledContent(title, value: formattedNumber(value.wrappedValue, fractionDigits: 2))
             Slider(value: value, in: range, step: 0.05)
         }
     }
 
     private var printerStatus: String {
         switch model.bluetooth.state {
-        case .ready: model.bluetooth.connectedPrinterName ?? String(localized: "Ready")
-        case .scanning: String(localized: "Searching…")
-        case .connecting: String(localized: "Connecting…")
-        case .bluetoothUnavailable: String(localized: "Bluetooth unavailable")
-        default: String(localized: "Not connected")
+        case .ready: model.bluetooth.connectedPrinterName ?? pt210Localized("Ready")
+        case .scanning: pt210Localized("Searching…")
+        case .connecting: pt210Localized("Connecting…")
+        case .bluetoothUnavailable: pt210Localized("Bluetooth unavailable")
+        default: pt210Localized("Not connected")
         }
     }
 
     private func pendingTitle(_ job: PrintJob) -> String {
         switch job.content {
-        case .plainText: String(localized: "Shared text")
-        case .markdown: String(localized: "Shared Markdown")
-        case .html: String(localized: "Shared HTML")
-        case .image: String(localized: "Shared image")
+        case .plainText: pt210Localized("Shared text")
+        case .markdown: pt210Localized("Shared Markdown")
+        case .html: pt210Localized("Shared HTML")
+        case .image: pt210Localized("Shared image")
         }
     }
+}
+
+private extension ContentView {
+    static let jobDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+}
+
+private func formattedNumber(_ value: Double, fractionDigits: Int) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = fractionDigits
+    formatter.maximumFractionDigits = fractionDigits
+    return formatter.string(from: NSNumber(value: value)) ?? String(value)
 }
 
 private extension Optional where Wrapped == URL {
@@ -270,11 +357,11 @@ private extension Optional where Wrapped == URL {
 }
 
 private struct PrinterView: View {
-    @Bindable var model: AppModel
+    @ObservedObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             List {
                 Section("Status") {
                     Text(statusText)
@@ -308,23 +395,23 @@ private struct PrinterView: View {
 
     private var statusText: String {
         switch model.bluetooth.state {
-        case .ready: String(localized: "Ready to print")
-        case .connected: String(localized: "Discovering printer services…")
-        case .connecting: String(localized: "Connecting…")
-        case .scanning: String(localized: "Searching…")
-        case .bluetoothUnavailable: String(localized: "Bluetooth unavailable")
+        case .ready: pt210Localized("Ready to print")
+        case .connected: pt210Localized("Discovering printer services…")
+        case .connecting: pt210Localized("Connecting…")
+        case .scanning: pt210Localized("Searching…")
+        case .bluetoothUnavailable: pt210Localized("Bluetooth unavailable")
         case .error(let message): message
-        default: String(localized: "Not connected")
+        default: pt210Localized("Not connected")
         }
     }
 }
 
 private struct SettingsView: View {
-    @Bindable var model: AppModel
+    @ObservedObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             Form {
                 Section("Quality") {
                     Picker("Preset", selection: $model.qualityPreset) {
@@ -332,7 +419,7 @@ private struct SettingsView: View {
                             Text(preset.title).tag(preset)
                         }
                     }
-                    .onChange(of: model.qualityPreset) { _, preset in model.applyPreset(preset) }
+                    .onChange(of: model.qualityPreset) { preset in model.applyPreset(preset) }
                 }
 
                 Section("Image") {
@@ -439,7 +526,7 @@ private struct SettingsView: View {
                     LabeledContent("Heating", value: "D:\(model.printerSettings.quality.maxHeatingDots) T:\(model.printerSettings.quality.heatingTime) I:\(model.printerSettings.quality.heatingInterval)")
                     LabeledContent("Transport", value: "\(model.printerSettings.transport.blePacingMilliseconds) ms / \(model.printerSettings.transport.rasterStripHeight) rows")
                     LabeledContent("Last job bytes", value: model.executor.diagnostics.lastJobBytes.map(String.init) ?? "—")
-                    LabeledContent("Last duration", value: model.executor.diagnostics.lastDurationSeconds.map { "\($0.formatted(.number.precision(.fractionLength(2)))) s" } ?? "—")
+                    LabeledContent("Last duration", value: model.executor.diagnostics.lastDurationSeconds.map { "\(formattedNumber($0, fractionDigits: 2)) s" } ?? "—")
                     LabeledContent("Last error", value: model.executor.diagnostics.lastError ?? "—")
                     Button("Print quality test page", systemImage: "doc.text.magnifyingglass", action: model.printTestPage)
                     Image("QualityTestImage")
@@ -462,7 +549,7 @@ private struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .onChange(of: model.printerSettings) { _, _ in model.markSettingsCustom() }
+            .onChange(of: model.printerSettings) { _ in model.markSettingsCustom() }
             .toolbar {
                 Button("Save") {
                     model.saveSettings()
@@ -479,7 +566,7 @@ private struct SettingsView: View {
         step: Double
     ) -> some View {
         VStack(alignment: .leading) {
-            LabeledContent(title, value: value.wrappedValue.formatted(.number.precision(.fractionLength(step < 1 ? 2 : 0))))
+            LabeledContent(title, value: formattedNumber(value.wrappedValue, fractionDigits: step < 1 ? 2 : 0))
             Slider(value: value, in: range, step: step)
         }
     }
@@ -500,11 +587,11 @@ private struct SettingsView: View {
 }
 
 private struct OnboardingView: View {
-    @Bindable var model: AppModel
+    @ObservedObject var model: AppModel
     @State private var page = 0
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             VStack(spacing: 28) {
                 Spacer()
                 Image(systemName: page == 0 ? "printer.fill" : page == 1 ? "antenna.radiowaves.left.and.right" : "checkmark.seal.fill")
@@ -543,3 +630,4 @@ private struct OnboardingView: View {
         }
     }
 }
+#endif

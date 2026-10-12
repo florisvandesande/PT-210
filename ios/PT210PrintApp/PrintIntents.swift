@@ -1,3 +1,4 @@
+#if !targetEnvironment(macCatalyst)
 import AppIntents
 import PT210PrintCore
 import UniformTypeIdentifiers
@@ -31,10 +32,7 @@ struct PrintTextIntent: AppIntent {
     static let title: LocalizedStringResource = "Print text on PT-210"
     static let description = IntentDescription("Prints plain text, Markdown, or HTML using the saved PT-210 printer.")
 #if targetEnvironment(macCatalyst)
-    @available(macOS 26.0, iOS 26.0, *)
-    static let supportedModes: IntentModes = .foreground(.immediate)
-    @available(macOS 27.0, iOS 27.0, *)
-    static let allowedExecutionTargets: IntentExecutionTargets = .main
+    static let openAppWhenRun = true
 #else
     static let openAppWhenRun = false
 #endif
@@ -74,15 +72,12 @@ struct PrintImageIntent: AppIntent {
     static let title: LocalizedStringResource = "Print image on PT-210"
     static let description = IntentDescription("Prints a JPEG, PNG, HEIC, or HEIF image on the saved PT-210 printer.")
 #if targetEnvironment(macCatalyst)
-    @available(macOS 26.0, iOS 26.0, *)
-    static let supportedModes: IntentModes = .foreground(.immediate)
-    @available(macOS 27.0, iOS 27.0, *)
-    static let allowedExecutionTargets: IntentExecutionTargets = .main
+    static let openAppWhenRun = true
 #else
     static let openAppWhenRun = false
 #endif
 
-    @Parameter(title: "Image", supportedContentTypes: [.image]) var image: IntentFile
+    @Parameter(title: "Image") var image: IntentFile
     @Parameter(title: "Quality", default: .imageHighQuality) var quality: ShortcutQuality
     @Parameter(title: "Scaling", default: .fitWidth) var scaling: ShortcutImageScaling
     @Parameter(title: "Copies", default: 1, inclusiveRange: (1, 20)) var copies: Int
@@ -109,15 +104,12 @@ struct PrintFileIntent: AppIntent {
     static let title: LocalizedStringResource = "Print file on PT-210"
     static let description = IntentDescription("Detects and prints a supported text, Markdown, HTML, or image file.")
 #if targetEnvironment(macCatalyst)
-    @available(macOS 26.0, iOS 26.0, *)
-    static let supportedModes: IntentModes = .foreground(.immediate)
-    @available(macOS 27.0, iOS 27.0, *)
-    static let allowedExecutionTargets: IntentExecutionTargets = .main
+    static let openAppWhenRun = true
 #else
     static let openAppWhenRun = false
 #endif
 
-    @Parameter(title: "File", supportedContentTypes: [.data, .text, .image, .html]) var file: IntentFile
+    @Parameter(title: "File") var file: IntentFile
     @Parameter(title: "Quality", default: .text) var quality: ShortcutQuality
     @Parameter(title: "Copies", default: 1, inclusiveRange: (1, 20)) var copies: Int
     @Parameter(title: "Feed lines", default: 3, inclusiveRange: (0, 20)) var feedLines: Int
@@ -178,3 +170,4 @@ private func importIntentImage(_ file: IntentFile) async throws -> (StoredImageR
     let reference = try await store.importAsset(from: temporaryURL, fileExtension: extensionName)
     return (reference, await store.assetURL(for: reference))
 }
+#endif

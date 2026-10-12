@@ -1,6 +1,6 @@
 @preconcurrency import CoreBluetooth
+import Combine
 import Foundation
-import Observation
 
 public struct DiscoveredPrinter: Identifiable, Sendable, Equatable {
     public let id: UUID
@@ -21,12 +21,11 @@ public enum PrinterConnectionState: Sendable, Equatable {
 }
 
 @MainActor
-@Observable
-public final class PT210BluetoothManager: NSObject {
-    public private(set) var state: PrinterConnectionState = .unknown
-    public private(set) var discoveredPrinters: [DiscoveredPrinter] = []
-    public private(set) var connectedPrinterName: String?
-    public private(set) var diagnostics = BluetoothDiagnostics()
+public final class PT210BluetoothManager: NSObject, ObservableObject {
+    @Published public private(set) var state: PrinterConnectionState = .unknown
+    @Published public private(set) var discoveredPrinters: [DiscoveredPrinter] = []
+    @Published public private(set) var connectedPrinterName: String?
+    @Published public private(set) var diagnostics = BluetoothDiagnostics()
 
     private var central: CBCentralManager!
     private var peripherals: [UUID: CBPeripheral] = [:]
@@ -57,7 +56,7 @@ public final class PT210BluetoothManager: NSObject {
         let services = PT210GATTProfile.known.map { CBUUID(string: $0.serviceUUID) }
         central.scanForPeripherals(withServices: services, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(5))
+            try? await sleep(milliseconds: 5_000)
             guard let self, self.state == .scanning, self.discoveredPrinters.isEmpty else { return }
             self.central.stopScan()
             self.central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
@@ -84,7 +83,7 @@ public final class PT210BluetoothManager: NSObject {
                 central.connect(peripheral)
                 connectionTimeoutTask?.cancel()
                 connectionTimeoutTask = Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .seconds(12))
+                    try? await sleep(milliseconds: 12_000)
                     guard !Task.isCancelled, let self, self.continuation != nil else { return }
                     self.central.cancelPeripheralConnection(peripheral)
                     self.state = .error(PrintError.connectionTimedOut.localizedDescription)
@@ -98,12 +97,40 @@ public final class PT210BluetoothManager: NSObject {
 
     public func reconnectSavedPrinter() async throws {
         for _ in 0..<30 where central.state == .unknown {
-            try await Task.sleep(for: .milliseconds(100))
+            try await sleep(milliseconds: 100)
         }
         guard central.state == .poweredOn else { throw PrintError.bluetoothUnavailable }
         let settings = try await settingsStore.load()
         guard let id = settings.peripheralIdentifier else { throw PrintError.printerNotFound }
         try await connect(to: id)
+    }
+
+    public func ensureReadyForPrint() async throws {
+        for _ in 0..<30 where central.state == .unknown {
+            try await sleep(milliseconds: 100)
+        }
+        guard central.state == .poweredOn else { throw PrintError.bluetoothUnavailable }
+        if state == .ready { return }
+
+        if let identifier = try? await settingsStore.load().peripheralIdentifier {
+            do {
+                try await connect(to: identifier)
+                return
+            } catch {
+                // The saved CoreBluetooth identifier may no longer be available.
+                // A foreground scan below can discover the same printer again.
+            }
+        }
+
+        startScan()
+        for _ in 0..<120 {
+            if let printer = discoveredPrinters.first {
+                try await connect(to: printer.id)
+                return
+            }
+            try await sleep(milliseconds: 100)
+        }
+        throw PrintError.printerNotFound
     }
 
     public func disconnect() {
@@ -131,7 +158,7 @@ public final class PT210BluetoothManager: NSObject {
             let chunk = data[start..<end]
             if writeType == .withoutResponse {
                 while !peripheral.canSendWriteWithoutResponse {
-                    try await Task.sleep(for: .milliseconds(10))
+                    try await sleep(milliseconds: 10)
                     try Task.checkCancellation()
                 }
                 peripheral.writeValue(chunk, for: characteristic, type: writeType)
@@ -141,7 +168,7 @@ public final class PT210BluetoothManager: NSObject {
                     peripheral.writeValue(chunk, for: characteristic, type: writeType)
                 }
             }
-            if pacingMilliseconds > 0 { try await Task.sleep(for: .milliseconds(pacingMilliseconds)) }
+            if pacingMilliseconds > 0 { try await sleep(milliseconds: pacingMilliseconds) }
         }
         state = .ready
     }
@@ -223,6 +250,11 @@ public final class PT210BluetoothManager: NSObject {
         state = .ready
         resumeConnection()
     }
+}
+
+private func sleep(milliseconds: Int) async throws {
+    guard milliseconds > 0 else { return }
+    try await Task.sleep(nanoseconds: UInt64(milliseconds) * 1_000_000)
 }
 
 public struct BluetoothDiagnostics: Sendable, Equatable {

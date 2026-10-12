@@ -1,11 +1,12 @@
 import CoreGraphics
+import Combine
 import Foundation
 import ImageIO
 
 @MainActor
-public final class PrintJobExecutor {
-    public private(set) var state: PrintJobState = .idle
-    public private(set) var diagnostics = PrintExecutionDiagnostics()
+public final class PrintJobExecutor: ObservableObject {
+    @Published public private(set) var state: PrintJobState = .idle
+    @Published public private(set) var diagnostics = PrintExecutionDiagnostics()
     private let bluetooth: PT210BluetoothManager
     private let settingsStore: SharedSettingsStore
 
@@ -19,26 +20,23 @@ public final class PrintJobExecutor {
         let storedSettings = try await settingsStore.load()
         let settings = effectiveSettings(for: job, storedSettings: storedSettings)
         let image = try await render(job.content, settings: settings.render, assetURL: assetURL)
-        return try ImageProcessor.monochrome(image: image, settings: settings)
+        return try await Self.processMonochrome(image: image, settings: settings)
     }
 
     public func execute(_ job: PrintJob, assetURL: URL? = nil) async throws {
-        let start = ContinuousClock.now
+        let start = Date()
         do {
             state = .preparing
             let storedSettings = try await settingsStore.load()
             let settings = effectiveSettings(for: job, storedSettings: storedSettings)
             let image = try await render(job.content, settings: settings.render, assetURL: assetURL)
-            let bitmap = try ImageProcessor.monochrome(image: image, settings: settings)
-            let strips = try ESCPOSRasterEncoder.makeStrips(
-                bitmap: bitmap,
-                rowsPerStrip: settings.transport.rasterStripHeight
+            let prepared = try await Self.prepareRaster(
+                image: image,
+                settings: settings,
+                feedLines: job.feedLinesAfter
             )
-            let feedStrips = try ESCPOSRasterEncoder.makeFeedStrips(
-                widthBytes: bitmap.bytesPerRow,
-                lines: job.feedLinesAfter,
-                rowsPerStrip: settings.transport.rasterStripHeight
-            )
+            let strips = prepared.strips
+            let feedStrips = prepared.feedStrips
             state = .connecting
             try await ensurePrinterConnection()
             state = .configuringPrinter
@@ -51,16 +49,16 @@ public final class PrintJobExecutor {
                     let completed = Double(copy * strips.count + index) / Double(job.copies * strips.count)
                     state = .sending(progress: completed)
                     try await bluetooth.send(strip, pacingMilliseconds: settings.transport.blePacingMilliseconds)
-                    try await Task.sleep(for: .milliseconds(settings.transport.postStripDelayMilliseconds))
+                    try await sleep(milliseconds: settings.transport.postStripDelayMilliseconds)
                 }
                 for strip in feedStrips {
                     try await bluetooth.send(strip, pacingMilliseconds: settings.transport.blePacingMilliseconds)
-                    try await Task.sleep(for: .milliseconds(settings.transport.postStripDelayMilliseconds))
+                    try await sleep(milliseconds: settings.transport.postStripDelayMilliseconds)
                 }
             }
             diagnostics.lastJobBytes = (strips.reduce(0) { $0 + $1.count }
                 + feedStrips.reduce(0) { $0 + $1.count }) * job.copies
-            diagnostics.lastDurationSeconds = start.duration(to: .now).seconds
+            diagnostics.lastDurationSeconds = Date().timeIntervalSince(start)
             diagnostics.lastError = nil
             state = .completed
         } catch is CancellationError {
@@ -68,7 +66,7 @@ public final class PrintJobExecutor {
             throw PrintError.cancelled
         } catch {
             diagnostics.lastError = error.localizedDescription
-            diagnostics.lastDurationSeconds = start.duration(to: .now).seconds
+            diagnostics.lastDurationSeconds = Date().timeIntervalSince(start)
             state = .failed(error.localizedDescription)
             throw error
         }
@@ -149,7 +147,7 @@ public final class PrintJobExecutor {
                     pacingMilliseconds: settings.transport.blePacingMilliseconds
                 )
 
-                let imageBitmap = try ImageProcessor.monochrome(
+                let imageBitmap = try await Self.processMonochrome(
                     image: image,
                     settings: settings,
                     calibrationProcessing: variant.imageProcessing
@@ -161,7 +159,7 @@ public final class PrintJobExecutor {
                 labelRender.bottomMargin = 6
                 let fullLabel = variant.label + "\nHeat D:\(settings.quality.maxHeatingDots) T:\(settings.quality.heatingTime) I:\(settings.quality.heatingInterval)  BLE:\(settings.transport.blePacingMilliseconds)ms Strip:\(settings.transport.rasterStripHeight) Delay:\(settings.transport.postStripDelayMilliseconds)"
                 let labelImage = try TextRenderer.render(.plainText(fullLabel), settings: labelRender)
-                let labelBitmap = try ImageProcessor.monochrome(image: labelImage, settings: settings)
+                let labelBitmap = try await Self.processMonochrome(image: labelImage, settings: settings)
                 let bitmaps = [imageBitmap, labelBitmap]
 
                 for bitmap in bitmaps {
@@ -172,7 +170,7 @@ public final class PrintJobExecutor {
                     for strip in strips {
                         try Task.checkCancellation()
                         try await bluetooth.send(strip, pacingMilliseconds: settings.transport.blePacingMilliseconds)
-                        try await Task.sleep(for: .milliseconds(settings.transport.postStripDelayMilliseconds))
+                        try await sleep(milliseconds: settings.transport.postStripDelayMilliseconds)
                     }
                 }
                 let feed = try ESCPOSRasterEncoder.makeFeedStrips(
@@ -185,7 +183,7 @@ public final class PrintJobExecutor {
                 }
                 state = .sending(progress: Double(variantIndex + 1) / Double(variants.count))
                 // Give the small thermal head time to cool between full-width photos.
-                try await Task.sleep(for: .milliseconds(800))
+                try await sleep(milliseconds: 800)
             }
             state = .completed
         } catch is CancellationError {
@@ -225,15 +223,59 @@ public final class PrintJobExecutor {
             try await bluetooth.reconnectSavedPrinter()
         } catch {
             try Task.checkCancellation()
-            try await Task.sleep(for: .milliseconds(500))
+            try await sleep(milliseconds: 500)
             try await bluetooth.reconnectSavedPrinter()
         }
     }
+
+    private static func processMonochrome(
+        image: CGImage,
+        settings: PrinterSettings,
+        calibrationProcessing: CalibrationImageProcessing = .standard
+    ) async throws -> MonochromeBitmap {
+        let sendableImage = SendableCGImage(value: image)
+        return try await Task.detached(priority: .userInitiated) {
+            try ImageProcessor.monochrome(
+                image: sendableImage.value,
+                settings: settings,
+                calibrationProcessing: calibrationProcessing
+            )
+        }.value
+    }
+
+    private static func prepareRaster(
+        image: CGImage,
+        settings: PrinterSettings,
+        feedLines: Int
+    ) async throws -> PreparedRaster {
+        let sendableImage = SendableCGImage(value: image)
+        return try await Task.detached(priority: .userInitiated) {
+            try Task.checkCancellation()
+            let bitmap = try ImageProcessor.monochrome(image: sendableImage.value, settings: settings)
+            let strips = try ESCPOSRasterEncoder.makeStrips(
+                bitmap: bitmap,
+                rowsPerStrip: settings.transport.rasterStripHeight
+            )
+            let feedStrips = try ESCPOSRasterEncoder.makeFeedStrips(
+                widthBytes: bitmap.bytesPerRow,
+                lines: feedLines,
+                rowsPerStrip: settings.transport.rasterStripHeight
+            )
+            return PreparedRaster(strips: strips, feedStrips: feedStrips)
+        }.value
+    }
 }
 
-private extension Duration {
-    var seconds: Double {
-        let components = self.components
-        return Double(components.seconds) + Double(components.attoseconds) / 1e18
-    }
+private struct PreparedRaster: Sendable {
+    let strips: [Data]
+    let feedStrips: [Data]
+}
+
+private struct SendableCGImage: @unchecked Sendable {
+    let value: CGImage
+}
+
+private func sleep(milliseconds: Int) async throws {
+    guard milliseconds > 0 else { return }
+    try await Task.sleep(nanoseconds: UInt64(milliseconds) * 1_000_000)
 }

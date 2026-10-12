@@ -11,6 +11,7 @@
 		A00000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* AppModel.swift */; };
 		A00000000000000000000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* ContentView.swift */; };
 		A00000000000000000000004 /* PrintIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000004 /* PrintIntents.swift */; };
+		A0000000000000000000000A /* ShellBridgeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000D /* ShellBridgeCoordinator.swift */; };
 		A00000000000000000000005 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* ShareViewController.swift */; };
 		A00000000000000000000006 /* PT210PrintCore in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000001 /* PT210PrintCore */; };
 		A00000000000000000000007 /* PT210PrintCore in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000002 /* PT210PrintCore */; };
@@ -55,6 +56,7 @@
 		B0000000000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B0000000000000000000000B /* PT210PrintShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PT210PrintShare.entitlements; sourceTree = "<group>"; };
 		B0000000000000000000000C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B0000000000000000000000D /* ShellBridgeCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellBridgeCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,6 +95,7 @@
 				B00000000000000000000002 /* AppModel.swift */,
 				B00000000000000000000003 /* ContentView.swift */,
 				B00000000000000000000004 /* PrintIntents.swift */,
+				B0000000000000000000000D /* ShellBridgeCoordinator.swift */,
 				B00000000000000000000006 /* Info.plist */,
 				B00000000000000000000007 /* PT210Print.entitlements */,
 				B0000000000000000000000C /* Assets.xcassets */,
@@ -229,6 +232,7 @@
 				A00000000000000000000002 /* AppModel.swift in Sources */,
 				A00000000000000000000003 /* ContentView.swift in Sources */,
 				A00000000000000000000004 /* PrintIntents.swift in Sources */,
+				A0000000000000000000000A /* ShellBridgeCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,9 +267,9 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;
 		};
@@ -279,10 +283,10 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.9;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -297,11 +301,12 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintApp/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				"IPHONEOS_DEPLOYMENT_TARGET[sdk=macosx*]" = 13.0;
 				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				MACCATALYST_DEPLOYMENT_TARGET = 27.0;
+				MACCATALYST_DEPLOYMENT_TARGET = 13.0;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -320,11 +325,12 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintApp/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				"IPHONEOS_DEPLOYMENT_TARGET[sdk=macosx*]" = 13.0;
 				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				MACCATALYST_DEPLOYMENT_TARGET = 27.0;
+				MACCATALYST_DEPLOYMENT_TARGET = 13.0;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -342,7 +348,7 @@
 				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintShareExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -363,7 +369,7 @@
 				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PT210PrintShareExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = nl.florisvandesande.pt210print.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -26,6 +26,7 @@ public enum PrintJobSource: String, Codable, Sendable {
     case mainApp
     case shareExtension
     case shortcut
+    case shell
 }
 
 public enum PrintQualityPresetID: String, Codable, CaseIterable, Sendable {
@@ -137,7 +138,17 @@ public struct CalibrationVariant: Identifiable, Sendable, Equatable {
         case .atkinson: "Atkinson"
         case .floydSteinberg: "FloydSteinberg"
         }
-        return "\(id) \(method) T:\(threshold.formatted(.number.precision(.fractionLength(2)))) B:\(brightness.formatted(.number.precision(.fractionLength(2)))) C:\(contrast.formatted(.number.precision(.fractionLength(2)))) G:\(gamma.formatted(.number.precision(.fractionLength(2)))) S:\(sharpness.formatted(.number.precision(.fractionLength(2)))) LC:\(localContrast.formatted(.number.precision(.fractionLength(2))))"
+        return String(
+            format: "%@ %@ T:%.2f B:%.2f C:%.2f G:%.2f S:%.2f LC:%.2f",
+            id,
+            method,
+            threshold,
+            brightness,
+            contrast,
+            gamma,
+            sharpness,
+            localContrast
+        )
     }
 
     public static let screeningRound: [CalibrationVariant] = [

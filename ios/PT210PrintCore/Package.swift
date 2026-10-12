@@ -1,12 +1,13 @@
-// swift-tools-version: 6.4
+// swift-tools-version: 5.9
 import PackageDescription
 
 let package = Package(
     name: "PT210PrintCore",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v27),
-        .macCatalyst(.v27)
+        .macOS(.v13),
+        .iOS(.v17),
+        .macCatalyst(.v13)
     ],
     products: [
         .library(name: "PT210PrintCore", targets: ["PT210PrintCore"])
